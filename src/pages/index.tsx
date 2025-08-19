@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cherry_Bomb_One } from "next/font/google";
+import { useEffect, useState } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -11,105 +12,95 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const cherryBombOne = Cherry_Bomb_One({ weight: "400", subsets: ["latin"] });
+
+interface Movie {
+  Title: string;
+  Year: string;
+}
+
 export default function Home() {
+  const [value, setValue] = useState("");
+  const [movies, setMovies] = useState([]);
+  const [matchedMovies, setMatchedMovies] = useState([]);
+  const [guesses, setGuesses] = useState<Movie[]>([]);
+
+  const fetchMovies = async () => {
+    const res = await fetch("/movies.json");
+    const movies = await res.json();
+    setMovies(movies);
+  };
+
+  const handleInputChange = (event: { target: { value: any } }) => {
+    const inputValue = event.target.value;
+    setValue(inputValue);
+
+    // If the input is empty, reset matchedMovies to show all movies
+    if (inputValue.trim() === "") {
+      setMatchedMovies([]);
+      return;
+    }
+
+    // Filter movies based on the input value
+    const filteredMovies = movies.filter((movie: { Title: string; Year: string }) => movie.Title.toLowerCase().includes(inputValue.toLowerCase()));
+    setMatchedMovies(filteredMovies);
+  };
+
+  const handleMovieClick = (movie: Movie) => {
+    handleInputChange({ target: { value: movie.Title } });
+    setGuesses((prevGuesses) => [...prevGuesses, movie]);
+  };
+
+  // Fetch movies from the JSON file
+  useEffect(() => {
+    fetchMovies();
+  }, []);
+
   return (
     <div
-      className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
+      className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
     >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+      <header className="w-full">
+        <h1 className={`${cherryBombOne.className} font-sans text-3xl`}>moviemoji</h1>
+      </header>
+      <main className="flex flex-col gap-[32px] row-start-2 items-center">
+        <h2 className="text-5xl sm:text-6xl md:text-7xl text-center">😂 🥶 👽 😽 👺</h2>
+        <input
+          className="w-full sm:w-[400px] md:w-[500px] lg:w-[600px] h-10 sm:h-12 px-4 sm:px-5 rounded-full border border-solid border-black/[.08] bg-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-black transition-colors"
+          type="text"
+          placeholder="Search for a movie or emoji..."
+          value={value}
+          onChange={handleInputChange}
         />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        <div className="flex flex-wrap gap-2">
+          {guesses.map((guess, index) => (
+            <span
+              key={index}
+              className="px-3 py-1 bg-gray-200 rounded-full text-sm text-gray-700 hover:bg-gray-300 transition-colors"
+              onClick={() => handleMovieClick(guess)}
+            >
+              ❌ {guess.Title} ({guess.Year})
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-col gap-4 w-full sm:w-[400px] md:w-[500px] lg:w-[600px]">
+          {value.trim() !== "" &&
+            (matchedMovies.length > 0 ? (
+              matchedMovies.map((movie: Movie, index: number) => (
+                <button
+                  key={index}
+                  className="p-4 border border-solid border-black/[.08] rounded-lg bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleMovieClick(movie)}
+                >
+                  <h3 className="text-xl font-semibold">{movie.Title}</h3>
+                  <p className="text-gray-600">Year: {movie.Year}</p>
+                </button>
+              ))
+            ) : (
+              <p className="text-gray-500">No movies found</p>
+            ))}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
