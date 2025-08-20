@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Geist, Geist_Mono, Cherry_Bomb_One } from "next/font/google";
 import { useEffect, useState } from "react";
 import { DBMovie, getTodaysMovie } from "@/lib/movies";
+import { celebrate } from "@/utils/confetti";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function Home({ movie }: { movie: DBMovie | null }) {
   const [movies, setMovies] = useState([]);
   const [matchedMovies, setMatchedMovies] = useState([]);
   const [guesses, setGuesses] = useState<Movie[]>([]);
+  const [lives, setLives] = useState<string[]>(["❤️", "❤️", "❤️"]); // 3 lives
 
   const fetchMovies = async () => {
     const res = await fetch("/movies.json");
@@ -69,8 +71,15 @@ export default function Home({ movie }: { movie: DBMovie | null }) {
     <div
       className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
     >
-      <header className="w-full">
+      <header className="w-full flex items-baseline justify-between">
         <h1 className={`${cherryBombOne.className} font-sans text-3xl`}>moviemoji</h1>
+        <div className="flex items-center gap-2">
+          {lives.map((heart, index) => (
+            <span key={index} className="text-2xl">
+              {heart}
+            </span>
+          ))}
+        </div>
       </header>
       <main className="flex flex-col gap-[32px] row-start-2 items-center">
         <div>
@@ -78,7 +87,6 @@ export default function Home({ movie }: { movie: DBMovie | null }) {
             <h2 className="text-5xl sm:text-6xl md:text-7xl inline-block px-5">{emoji}</h2>
           ))}
         </div>
-        <h3 className="text-2xl sm:text-3xl md:text-4xl text-center max-w-2xl">{movie?.title}</h3>
         <input
           className="w-full sm:w-[400px] md:w-[500px] lg:w-[600px] h-10 sm:h-12 px-4 sm:px-5 rounded-full border border-solid border-black/[.08] bg-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-black transition-colors"
           type="text"
