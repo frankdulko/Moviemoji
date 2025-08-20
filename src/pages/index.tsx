@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Geist, Geist_Mono, Cherry_Bomb_One } from "next/font/google";
 import { useEffect, useState } from "react";
+import { DBMovie, getTodaysMovie } from "@/lib/movies";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,7 +20,15 @@ interface Movie {
   Year: string;
 }
 
-export default function Home() {
+export const getStaticProps = async () => {
+  const movie = await getTodaysMovie();
+  return {
+    props: { movie: movie ?? null },
+    revalidate: 60 * 60 * 24, // 24h safety; on-demand revalidation will update sooner
+  };
+};
+
+export default function Home({ movie }: { movie: DBMovie | null }) {
   const [value, setValue] = useState("");
   const [movies, setMovies] = useState([]);
   const [matchedMovies, setMatchedMovies] = useState([]);
@@ -64,7 +73,12 @@ export default function Home() {
         <h1 className={`${cherryBombOne.className} font-sans text-3xl`}>moviemoji</h1>
       </header>
       <main className="flex flex-col gap-[32px] row-start-2 items-center">
-        <h2 className="text-5xl sm:text-6xl md:text-7xl text-center">😂 🥶 👽 😽 👺</h2>
+        <div>
+          {movie?.emojis.map((emoji) => (
+            <h2 className="text-5xl sm:text-6xl md:text-7xl inline-block px-5">{emoji}</h2>
+          ))}
+        </div>
+        <h3 className="text-2xl sm:text-3xl md:text-4xl text-center max-w-2xl">{movie?.title}</h3>
         <input
           className="w-full sm:w-[400px] md:w-[500px] lg:w-[600px] h-10 sm:h-12 px-4 sm:px-5 rounded-full border border-solid border-black/[.08] bg-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-black transition-colors"
           type="text"
