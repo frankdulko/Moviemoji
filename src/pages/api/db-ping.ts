@@ -7,8 +7,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Lightweight command to verify connectivity
     const result = await db.command({ ping: 1 });
     res.status(200).json({ ok: true, result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("DB PING ERROR:", err);
-    res.status(500).json({ ok: false, error: err?.message });
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ ok: false, error: message });
   }
 }

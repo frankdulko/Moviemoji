@@ -1,10 +1,7 @@
-import Image from "next/image";
 import { Geist, Geist_Mono, Cherry_Bomb_One } from "next/font/google";
 import { useEffect, useState } from "react";
 import { DBMovie, getOrPickTodaysMovie } from "@/lib/movies";
 import { celebrate } from "@/utils/confetti";
-import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { AnimatePresence, motion } from "motion/react";
 import WinLoseModal from "@/components/WinLoseModal";
 import HintPanel from "@/components/HintPanel";
 
@@ -49,7 +46,6 @@ export default function Home({
   const [lives, setLives] = useState<string[]>(["❤️", "❤️", "❤️"]); // 3 lives
   const [isShaking, setIsShaking] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [parent] = useAutoAnimate({ duration: 1000, easing: "ease-in-out" });
   const [modalOpen, setModalOpen] = useState(false);
   const [status, setStatus] = useState<"win" | "lose">("win");
 
@@ -59,7 +55,7 @@ export default function Home({
     setMovies(movies);
   };
 
-  const handleInputChange = (event: { target: { value: any } }) => {
+  const handleInputChange = (event: { target: { value: string } }) => {
     const inputValue = event.target.value;
     setValue(inputValue);
 
