@@ -1,22 +1,26 @@
 // components/WinLoseModal.tsx
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DBMovie } from "@/lib/movies";
+
+export type WinStats = {
+  livesLeft: number;
+  wrongGuesses: number;
+  hintUsed: boolean;
+};
 
 type Props = {
   open: boolean;
   status: "win" | "lose";
   dailyMovie?: DBMovie;
-  onClose: () => void;
-  onPlayAgain: () => void;
+  winStats?: WinStats;
 };
 
-export default function WinLoseModal({ open, status, dailyMovie, onClose, onPlayAgain }: Props) {
+export default function WinLoseModal({ open, status, dailyMovie, winStats }: Props) {
   const isWin = status === "win";
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
-        // shadcn includes data-state classes; these add smooth transitions
+        showCloseButton={false}
         className="
           sm:max-w-md
           data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95
@@ -24,31 +28,56 @@ export default function WinLoseModal({ open, status, dailyMovie, onClose, onPlay
           data-[state=open]:duration-200 data-[state=closed]:duration-150
         "
       >
-        <DialogHeader>
-          <DialogTitle className={"text-3xl text-center"}>{isWin ? "You got it!" : "Better luck tomorrow!"}</DialogTitle>
-          <DialogDescription>
-            <div className="text-center">
-              {dailyMovie?.emojis.map((emoji, index) => (
-                <p key={index} className="text-3xl px-3 inline-block">
-                  {emoji}
-                </p>
-              ))}
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-3xl text-center">
+            {isWin ? "You got it!" : "Better luck tomorrow!"}
+          </DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-2">
+              <div className="text-center">
+                {dailyMovie?.emojis.map((emoji, index) => (
+                  <span key={index} className="text-3xl px-3 inline-block">
+                    {emoji}
+                  </span>
+                ))}
+              </div>
+              <p className="text-center text-base">
+                <span className="font-semibold text-foreground">{dailyMovie?.title}</span>
+                {dailyMovie?.year && (
+                  <span className="ml-1 text-muted-foreground font-medium">({dailyMovie.year})</span>
+                )}
+              </p>
             </div>
-            <p className="text-center text-lg">{`${dailyMovie?.title} (${dailyMovie?.year})`}</p>
           </DialogDescription>
         </DialogHeader>
 
-        {/* Optional: show the answer / stats here */}
-        <div className="mt-2 rounded-xl bg-muted p-4 text-sm">{/* e.g., Answer, guesses, streak */}</div>
+        {isWin && winStats && (
+          <div className="mt-4 rounded-2xl bg-muted/70 px-4 py-3 border border-muted-foreground/10">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase mb-2">
+              Your stats
+            </p>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Lives left</span>
+                <span className="font-semibold tabular-nums">
+                  {Array.from({ length: winStats.livesLeft }, () => "❤️").join(" ") || "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Wrong guesses</span>
+                <span className="font-semibold tabular-nums">{winStats.wrongGuesses}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Hint used</span>
+                <span className="font-semibold">{winStats.hintUsed ? "Yes" : "No"}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
-        <DialogFooter className="gap-2">
-          {!isWin && (
-            <Button variant="secondary" onClick={onClose}>
-              Hide
-            </Button>
-          )}
-          <Button onClick={onPlayAgain}>{isWin ? "Play Again" : "Try Another"}</Button>
-        </DialogFooter>
+        <p className="text-center text-muted-foreground text-xs mt-4">
+          Come back tomorrow to play again.
+        </p>
       </DialogContent>
     </Dialog>
   );

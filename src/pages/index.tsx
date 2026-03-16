@@ -1,12 +1,12 @@
 import Image from "next/image";
 import { Geist, Geist_Mono, Cherry_Bomb_One } from "next/font/google";
 import { useEffect, useState } from "react";
-import { DBMovie, getTodaysMovie } from "@/lib/movies";
+import { DBMovie, getOrPickTodaysMovie } from "@/lib/movies";
 import { celebrate } from "@/utils/confetti";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Button } from "@/components/ui/button";
 import WinLoseModal from "@/components/WinLoseModal";
+import HintPanel from "@/components/HintPanel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,19 +21,27 @@ const geistMono = Geist_Mono({
 const cherryBombOne = Cherry_Bomb_One({ weight: "400", subsets: ["latin"] });
 
 interface Movie {
-  Title: string;
-  Year: string;
+  title: string;
+  year: string;
 }
 
-export const getStaticProps = async () => {
-  const movie = await getTodaysMovie();
-  return {
-    props: { dailyMovie: movie ?? null },
-    revalidate: 60 * 60 * 24, // 24h safety; on-demand revalidation will update sooner
-  };
+export const getServerSideProps = async () => {
+  try {
+    const dailyMovie = await getOrPickTodaysMovie();
+    return { props: { dailyMovie, error: null } };
+  } catch (err) {
+    console.error("[getServerSideProps] Failed to get today's movie:", err);
+    return { props: { dailyMovie: null, error: "no_puzzle" } };
+  }
 };
 
-export default function Home({ dailyMovie }: { dailyMovie: DBMovie | null }) {
+export default function Home({
+  dailyMovie,
+  error,
+}: {
+  dailyMovie: DBMovie | null;
+  error: string | null;
+}) {
   const [value, setValue] = useState("");
   const [movies, setMovies] = useState([]);
   const [matchedMovies, setMatchedMovies] = useState([]);
@@ -44,8 +52,6 @@ export default function Home({ dailyMovie }: { dailyMovie: DBMovie | null }) {
   const [parent] = useAutoAnimate({ duration: 1000, easing: "ease-in-out" });
   const [modalOpen, setModalOpen] = useState(false);
   const [status, setStatus] = useState<"win" | "lose">("win");
-
-  console.log(dailyMovie);
 
   const fetchMovies = async () => {
     const res = await fetch("/movies.json");
@@ -64,27 +70,23 @@ export default function Home({ dailyMovie }: { dailyMovie: DBMovie | null }) {
     }
 
     // Filter movies based on the input value
-    const filteredMovies = movies.filter((movie: { Title: string; Year: string }) => movie.Title.toLowerCase().includes(inputValue.toLowerCase()));
+    const filteredMovies = movies.filter((movie: Movie) => movie.title.toLowerCase().includes(inputValue.toLowerCase()));
     setMatchedMovies(filteredMovies);
   };
 
   const handleMovieClick = (movie: Movie) => {
-    handleInputChange({ target: { value: movie.Title } });
-    if (movie.Title.toLowerCase().trim() === (dailyMovie?.title || "").toLowerCase().trim()) {
+    handleInputChange({ target: { value: '' } });
+    if (movie.title.toLowerCase().trim() === puzzle.title.toLowerCase().trim()) {
       celebrate(); // Trigger confetti celebration
       setValue(""); // Clear input on correct guess
       setMatchedMovies([]); // Clear matched movies
       onCorrectGuess();
     } else {
-      // If the guess is incorrect, reduce lives
       setLives((prevLives) => {
-        const newLives = [...prevLives];
-        newLives.pop(); // Remove one life
+        const newLives = prevLives.slice(0, -1);
+        if (newLives.length === 0) onOutOfGuesses();
         return newLives;
       });
-      if (lives.length <= 1) {
-        onOutOfGuesses();
-      }
       setGuesses((prevGuesses) => [...prevGuesses, movie]);
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 400);
@@ -105,86 +107,87 @@ export default function Home({ dailyMovie }: { dailyMovie: DBMovie | null }) {
     fetchMovies();
   }, []);
 
+  if (!dailyMovie) {
+    return (
+      <div
+        className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] justify-items-center min-h-screen p-8 pb-12 gap-12 sm:p-12`}
+      >
+        <header className="w-full flex items-baseline justify-between">
+          <h1 className={`${cherryBombOne.className} font-sans text-3xl`}>moviemoji</h1>
+        </header>
+        <main className="flex flex-col gap-6 row-start-2 items-center justify-center text-center">
+          <p className="text-lg text-muted-foreground">
+            No puzzle right now. We&apos;ll have a new one soon.
+          </p>
+          <p className="text-sm text-muted-foreground">Check back later or refresh the page.</p>
+        </main>
+      </div>
+    );
+  }
+
+  const puzzle = dailyMovie;
+
   return (
     <div
-      className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
-    >
-      <header className="w-full flex items-baseline justify-between">
-        <h1 className={`${cherryBombOne.className} font-sans text-3xl`}>moviemoji</h1>
-        <div className="flex items-center gap-2">
-          {lives.map((heart, index) => (
-            <span key={index} className="text-2xl">
-              {heart}
+        className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] justify-items-center min-h-screen p-8 pb-12 gap-12 sm:p-12`}
+      >
+        <header className="w-full flex items-baseline justify-between">
+          <h1 className={`${cherryBombOne.className} font-sans text-3xl`}>moviemoji</h1>
+          <div className="flex items-center gap-2">
+            {lives.map((heart, index) => (
+              <span key={index} className="text-2xl">
+                {heart}
+              </span>
+            ))}
+          </div>
+        </header>
+      <main className="flex flex-col gap-8 row-start-2 items-center w-full max-w-[600px]">
+        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          Today&apos;s puzzle
+        </p>
+        <p className="text-lg font-medium text-center">Guess the movie from the emojis.</p>
+        <div className="w-full rounded-2xl border border-black/[.06] bg-black/[.02] px-6 py-8 sm:px-8 sm:py-10 flex flex-wrap justify-between">
+          {puzzle.emojis.map((emoji, index) => (
+            <span key={index} className="text-5xl sm:text-6xl md:text-7xl leading-none">
+              {emoji}
             </span>
           ))}
         </div>
-      </header>
-      <main className="flex flex-col gap-[32px] row-start-2 items-center">
-        <div>
-          {dailyMovie?.emojis.map((emoji, index) => (
-            <h2 key={index} className="text-5xl sm:text-6xl md:text-7xl inline-block px-5">
-              {emoji}
-            </h2>
-          ))}
-        </div>
-        <div className="inline-block w-full sm:w-[400px] md:w-[500px] lg:w-[600px]">
-          <button
-            type="button"
-            onClick={() => setShowHint(!showHint)}
-            aria-expanded={showHint}
-            aria-controls="hint-panel"
-            className="bg-amber-50 py-2 px-5 rounded-t-2xl border border-amber-400 cursor-pointer text-sm font-medium w-full"
-          >
-            {showHint ? "Hide hint" : "💡 Show hint"}
-          </button>
-          <div
-            className={[
-              "grid transition-[grid-template-rows] duration-250 ease-out",
-              "motion-reduce:transition-none",
-              showHint ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-            ].join(" ")}
-          >
-            <div
-              id="hint-panel"
-              className={[
-                "overflow-hidden", // required for the grid-rows trick
-                "opacity-0 transition-opacity duration-200 ease-out",
-                showHint ? "opacity-100" : "opacity-0",
-                "rounded-b-2xl border-b border-x border-amber-300 bg-amber-50/70 px-4 py-3 text-sm text-amber-900",
-              ].join(" ")}
-            >
-              {dailyMovie?.hint ?? "No hint available."}
-            </div>
-          </div>
-        </div>
+        {guesses.length >= 1 && (
+          <HintPanel
+            hint={puzzle.hint}
+            open={showHint}
+            onToggle={() => setShowHint((prev) => !prev)}
+          />
+        )}
         <input
-          className={`w-full sm:w-[400px] md:w-[500px] lg:w-[600px] h-10 sm:h-12 px-4 sm:px-5 rounded-full border border-solid border-black/[.08] bg-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-black transition-colors ${
+          className={`w-full h-10 sm:h-12 px-4 sm:px-5 rounded-full border border-solid border-black/[.08] bg-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-black transition-colors ${
             isShaking ? "animate-playful-shake" : ""
           }`}
           type="text"
-          placeholder="Search for a movie or emoji..."
+          placeholder="Search for a movie..."
           value={value}
           onChange={handleInputChange}
         />
-        <div className="flex flex-wrap gap-2">
+        {guesses.length > 0 && <div className="flex flex-wrap gap-2 justify-center w-full">
           {guesses.map((guess, index) => (
             <span key={index} className="px-3 py-1 bg-gray-200 rounded-full text-sm text-gray-700 hover:bg-gray-300 transition-colors">
-              ❌ {guess.Title} ({guess.Year})
+              ❌ {guess.title} ({guess.year})
             </span>
           ))}
-        </div>
-        <div className="flex flex-col gap-4 w-full sm:w-[400px] md:w-[500px] lg:w-[600px]">
+        </div>}
+        <div className="flex flex-col gap-4 w-full">
           {value.trim() !== "" &&
             (matchedMovies.length > 0 ? (
               matchedMovies.map((movie: Movie, index: number) => (
                 <button
                   key={index}
                   className="p-4 border border-solid border-black/[.08] rounded-lg bg-white hover:bg-gray-50 transition-colors cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  disabled={guesses.some((g) => g.Title.toLowerCase() === movie.Title.toLowerCase())}
+                  disabled={guesses.some((g) => g.title.toLowerCase() === movie.title.toLowerCase())}
                   onClick={() => handleMovieClick(movie)}
                 >
-                  <h3 className="text-xl font-semibold">{movie.Title}</h3>
-                  <p className="text-gray-600">Year: {movie.Year}</p>
+                  <h3 className="text-xl font-semibold">{movie.title}</h3>
+                  <p className="text-gray-600">Year: {movie.year}</p>
                 </button>
               ))
             ) : (
@@ -194,12 +197,12 @@ export default function Home({ dailyMovie }: { dailyMovie: DBMovie | null }) {
         <WinLoseModal
           open={modalOpen}
           status={status}
-          dailyMovie={dailyMovie ?? undefined}
-          onClose={() => setModalOpen(false)}
-          onPlayAgain={() => {
-            setModalOpen(false);
-            // reset input / fetch next / route, etc.
-          }}
+          dailyMovie={puzzle}
+          winStats={
+            status === "win"
+              ? { livesLeft: lives.length, wrongGuesses: guesses.length, hintUsed: showHint }
+              : undefined
+          }
         />
       </main>
     </div>
