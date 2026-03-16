@@ -6,6 +6,7 @@ export type DBMovie = {
   year: number;
   emojis: string[];
   used?: boolean;
+  hint: string;
 };
 
 function todayKeyUTC() {

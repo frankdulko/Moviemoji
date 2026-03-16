@@ -1,26 +1,71 @@
+/* Tailwind v4 entrypoint */
 @import "tailwindcss";
 
+/* (Keep ONE of these animation lines)
+   If you want to keep your current package: */
+@import "tw-animate-css";
+/* Or switch to the common one:
+@plugin "tailwindcss-animate";
+*/
+
+/* Light tokens only (no dark mode) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --radius: 0.625rem;
+
+  /* Optional, but shadcn components expect these names */
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
 }
 
+/* Wire Tailwind v4 theme tokens to your CSS vars */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Base layer */
+@layer base {
+  /* Remove this outline if you don’t want outlines on everything */
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground font-sans; }
+}
+
+@layer utilities {
+  @keyframes playful-shake {
+    0%,100% { transform: translateX(0) }
+    15%     { transform: translateX(-12px) rotate(-2deg) }
+    30%     { transform: translateX(12px) rotate(2deg) }
+    45%     { transform: translateX(-10px) rotate(-1.5deg) }
+    60%     { transform: translateX(10px) rotate(1.5deg) }
+    75%     { transform: translateX(-6px) rotate(-1deg) }
+    90%     { transform: translateX(6px) rotate(1deg) }
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  .animate-playful-shake { animation: playful-shake 0.6s cubic-bezier(.36,.07,.19,.97) both; }
 }
